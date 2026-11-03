@@ -60,6 +60,11 @@ def build_nav():
 
 def create_app(test_config=None):
     app = Flask(__name__)
+    if os.environ.get("TRUST_PROXY", "1") == "1":
+        # Behind Coolify/Traefik, Render or nginx: honour X-Forwarded-Proto/For so HTTPS is detected.
+        from werkzeug.middleware.proxy_fix import ProxyFix
+
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     db_url = os.environ.get("DATABASE_URL", "sqlite:///" + os.path.join(app.instance_path, "zawadee.db"))
     if db_url.startswith("postgres://"):  # Heroku/Render style URLs
         db_url = db_url.replace("postgres://", "postgresql://", 1)
