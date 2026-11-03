@@ -3,10 +3,13 @@ services:
   - type: web
     name: zawadeefarm
     runtime: python
+    plan: starter
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -w 3 -b 0.0.0.0:$PORT --timeout 60 wsgi:app
+    startCommand: gunicorn -w 3 --preload -b 0.0.0.0:$PORT --timeout 60 wsgi:app
     healthCheckPath: /healthz
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
       - key: SECRET_KEY
         generateValue: true
       - key: SESSION_COOKIE_SECURE

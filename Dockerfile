@@ -7,4 +7,4 @@ COPY . .
 RUN useradd -m farm && mkdir -p /app/farm/instance && chown -R farm /app
 USER farm
 EXPOSE 8000
-CMD ["sh", "-c", "gunicorn -w ${WEB_CONCURRENCY:-3} -b 0.0.0.0:${PORT:-8000} --timeout 60 wsgi:app"]
+CMD ["sh", "-c", "gunicorn -w ${WEB_CONCURRENCY:-3} --preload -b 0.0.0.0:${PORT:-8000} --timeout 60 wsgi:app"]
