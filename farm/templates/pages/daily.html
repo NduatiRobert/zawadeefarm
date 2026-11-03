@@ -1,0 +1,61 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Daily tasks' %}
+{% block page_sub %} · {{ today.strftime('%A %d %B %Y') }}{% endblock %}
+{% block content %}
+<div class="card toolbar-card mb-3"><div class="card-body d-flex flex-wrap gap-2">
+  <a class="btn btn-success" href="{{ url_for('crud.tasks_new') }}"><i class="bi bi-plus-lg"></i> New task</a>
+  <a class="btn btn-outline-success" href="{{ url_for('crud.production_new', product='Eggs') }}"><i class="bi bi-egg"></i> Record eggs {% if recorded_eggs %}<span class="badge text-bg-success">{{ recorded_eggs }} today</span>{% endif %}</a>
+  <a class="btn btn-outline-success" href="{{ url_for('crud.usage_new') }}"><i class="bi bi-bucket"></i> Issue feed</a>
+  <a class="btn btn-outline-danger" href="{{ url_for('crud.activities_new', activity_type='Mortality') }}"><i class="bi bi-x-octagon"></i> Record mortality</a>
+  <a class="btn btn-outline-primary" href="{{ url_for('pages.attendance_register') }}"><i class="bi bi-calendar-check"></i> Attendance {% if attendance_taken %}<i class="bi bi-check-circle-fill"></i>{% endif %}</a>
+  <a class="btn btn-outline-secondary ms-auto" href="{{ url_for('crud.tasks_list') }}"><i class="bi bi-list-ul"></i> All tasks</a>
+</div></div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card mb-3"><div class="card-header"><h2 class="card-title-sm mb-0"><i class="bi bi-list-check"></i> Tasks (overdue &amp; next 3 days)</h2></div>
+      <ul class="list-group list-group-flush list-agenda">
+      {% for t in tasks %}
+        <li class="list-group-item d-flex align-items-center gap-2">
+          <span class="badge text-bg-{{ badge(t.priority) }}">{{ t.priority }}</span>
+          <div class="flex-grow-1"><div>{{ t.title }}</div><div class="small {{ 'text-danger' if t.due_date and t.due_date < today else 'text-muted' }}">{{ dmy(t.due_date) }}{% if t.assigned_to %} · {{ t.assigned_to }}{% endif %}{% if t.enterprise %} · {{ t.enterprise }}{% endif %}</div></div>
+          <form method="post">{{ m.csrf() }}<input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="{{ t.id }}"><button class="btn btn-sm btn-outline-success"><i class="bi bi-check2"></i> Done</button></form>
+        </li>
+      {% else %}<li class="list-group-item text-muted text-center py-4">No open tasks.</li>{% endfor %}
+      </ul></div>
+
+    <div class="card mb-3"><div class="card-header"><h2 class="card-title-sm mb-0"><i class="bi bi-shield-plus"></i> Vaccinations &amp; follow-ups (next 7 days)</h2></div>
+      <ul class="list-group list-group-flush list-agenda">
+      {% for a in followups %}
+        <li class="list-group-item d-flex align-items-center gap-2">
+          <div class="flex-grow-1"><div><b>{{ a.activity_type }}</b>: {{ a.description or '' }}</div>
+            <div class="small {{ 'text-danger' if a.next_due_date < today else 'text-muted' }}">Due {{ dmy(a.next_due_date) }} · {{ a.group or a.animal or 'Farm' }}</div></div>
+          <a class="btn btn-sm btn-light" href="{{ url_for('crud.activities_new', activity_type=a.activity_type, group_id=a.group_id or '', description=a.description or '') }}" title="Record it"><i class="bi bi-plus-lg"></i></a>
+          <form method="post">{{ m.csrf() }}<input type="hidden" name="kind" value="followup"><input type="hidden" name="id" value="{{ a.id }}"><button class="btn btn-sm btn-outline-success"><i class="bi bi-check2"></i> Done</button></form>
+        </li>
+      {% else %}<li class="list-group-item text-muted text-center py-4">No follow-ups due.</li>{% endfor %}
+      </ul></div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card mb-3"><div class="card-header"><h2 class="card-title-sm mb-0"><i class="bi bi-gender-female"></i> Farrowings / births due this week</h2></div>
+      <ul class="list-group list-group-flush list-agenda">
+      {% for b in farrowings %}<li class="list-group-item d-flex"><div>{{ b.female }} <span class="small text-muted">served {{ dmy(b.service_date) }}</span></div>
+        <a class="ms-auto small" href="{{ url_for('crud.breeding_edit', id=b.id) }}">{{ dmy(b.expected_date) }} · record</a></li>
+      {% else %}<li class="list-group-item text-muted text-center py-4">None this week.</li>{% endfor %}
+      </ul></div>
+    <div class="card mb-3"><div class="card-header"><h2 class="card-title-sm mb-0"><i class="bi bi-clipboard-check"></i> Stock requests waiting</h2></div>
+      <ul class="list-group list-group-flush list-agenda">
+      {% for r in requests %}<li class="list-group-item d-flex"><div>{{ r.number }} · {{ r.item.name }} × {{ num(r.qty_requested) }} {{ r.item.unit }}<div class="small text-muted">{{ r.group or r.enterprise or '' }} · {{ r.requested_by or '' }}</div></div>
+        <a class="ms-auto align-self-center btn btn-sm btn-outline-success" href="{{ url_for('crud.requests_edit', id=r.id) }}">Issue</a></li>
+      {% else %}<li class="list-group-item text-muted text-center py-4">No pending requests.</li>{% endfor %}
+      </ul></div>
+    <div class="card mb-3"><div class="card-header"><h2 class="card-title-sm mb-0"><i class="bi bi-truck"></i> Groups due for market (2 weeks)</h2></div>
+      <ul class="list-group list-group-flush list-agenda">
+      {% for g in markets %}<li class="list-group-item d-flex"><a href="{{ url_for('pages.group_detail', id=g.id) }}">{{ g.name }}</a><span class="ms-auto small">{{ g.current_count }} head · {{ dmy(g.target_market_date) }}</span></li>
+      {% else %}<li class="list-group-item text-muted text-center py-4">No groups due for market.</li>{% endfor %}
+      </ul></div>
+    {% if low %}<div class="card"><div class="card-header"><h2 class="card-title-sm mb-0 text-danger"><i class="bi bi-exclamation-triangle"></i> Low stock</h2></div>
+      <ul class="list-group list-group-flush list-agenda">{% for i in low %}<li class="list-group-item d-flex">{{ i.name }}<span class="ms-auto small text-danger">{{ num(i.quantity) }} {{ i.unit }}</span></li>{% endfor %}</ul></div>{% endif %}
+  </div>
+</div>
+{% endblock %}

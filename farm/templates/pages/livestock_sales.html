@@ -1,0 +1,18 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Livestock Sales' %}
+{% block content %}
+{{ m.stat_tiles([
+  dict(label='Sales shown', value=total, tone='success', fmt='money', icon='cash-stack'),
+  dict(label='Live heads sold', value=heads, tone='warning', fmt='int', icon='truck'),
+]) }}
+<div class="card toolbar-card mb-3"><div class="card-body d-flex">
+  <span class="text-muted small align-self-center">Livestock sales are invoice lines. Raise an invoice to sell live animals, pork, eggs or manure.</span>
+  <a class="btn btn-success ms-auto" href="{{ url_for('crud.invoices_new') }}"><i class="bi bi-plus-lg"></i> New sale</a></div></div>
+<div class="card table-card"><div class="card-header d-flex"><h2 class="card-title-sm mb-0">Livestock sales</h2><button class="btn btn-sm btn-outline-secondary ms-auto no-print" onclick="window.print()"><i class="bi bi-printer"></i> Print</button></div>
+<div class="table-responsive"><table class="table data-table align-middle mb-0">
+  <thead><tr><th>Date</th><th>Invoice</th><th>Buyer</th><th>Enterprise</th><th>Group</th><th>Description</th><th class="text-end">Heads</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Amount</th><th>Status</th></tr></thead>
+  <tbody>{% for l in lines %}<tr><td>{{ dmy(l.invoice.date) }}</td><td><a href="{{ url_for('pages.invoice_view', id=l.invoice.id) }}">{{ l.invoice.number }}</a></td><td>{{ l.invoice.buyer }}</td><td>{{ l.enterprise }}</td><td>{{ l.group or '' }}</td><td>{{ l.description }}</td>
+    <td class="text-end">{{ l.heads_sold or '' }}</td><td class="text-end">{{ num(l.quantity) }} {{ l.unit or '' }}</td><td class="text-end">{{ money(l.unit_price, false) }}</td><td class="text-end">{{ money(l.amount, false) }}</td>
+    <td><span class="badge text-bg-{{ badge(l.invoice.status) }}">{{ l.invoice.status }}</span></td></tr>
+  {% else %}{{ m.empty(11, 'No livestock sales yet.') }}{% endfor %}</tbody></table></div></div>
+{% endblock %}

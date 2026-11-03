@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% import 'partials/macros.html' as m with context %}
+{% set page_title = (res.form_title if is_new and res.form_title else ('New ' if is_new else 'Edit ') ~ res.singular|lower) %}
+{% block content %}
+<form method="post" class="card form-card">
+  {{ m.csrf() }}
+  <div class="card-header d-flex align-items-center">
+    <a href="{{ res.url() }}" class="btn btn-sm btn-light me-2" title="Back"><i class="bi bi-arrow-left"></i></a>
+    <h2 class="card-title-sm mb-0">{{ res.singular }}{% if not is_new %} <span class="text-muted fw-normal">#{{ obj.id }}</span>{% endif %}</h2>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      {% for f in res.fields if f.show_in_form %}
+      <div class="col-12 col-md-{{ f.col if f.col <= 6 else 12 }}{% if f.col <= 4 %} col-lg-{{ f.col }}{% endif %}">
+        <label class="form-label" for="f_{{ f.name }}">{{ f.label }}{% if f.required %} <span class="text-danger">*</span>{% endif %}</label>
+        {{ m.field_input(f, values.get(f.name, '')) }}
+        {% if f.help %}<div class="form-text">{{ f.help }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if res.lines %}
+    {% set L = res.lines %}
+    <h3 class="section-title mt-4">{{ L.title }}</h3>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle lines-table" data-total-cols="{{ L.total|join(',') if L.total else '' }}">
+        <thead><tr>
+          {% for f in L.fields %}<th>{{ f.label }}{% if f.required %} <span class="text-danger">*</span>{% endif %}</th>{% endfor %}
+          {% if L.total %}<th class="text-end">Amount</th>{% endif %}<th></th>
+        </tr></thead>
+        <tbody>
+          {% set rows = line_rows if line_rows else [{}] %}
+          {% for row in rows %}
+          <tr class="line-row">
+            {% for f in L.fields %}<td data-col="{{ f.name }}">{{ m.field_input(f, row.get(f.name, ''), 'l_' ~ f.name, compact=True) }}</td>{% endfor %}
+            {% if L.total %}<td class="text-end line-amount fw-semibold">0.00</td>{% endif %}
+            <td><button type="button" class="btn btn-sm btn-light text-danger remove-line" title="Remove line"><i class="bi bi-x-lg"></i></button></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="{{ L.fields|length }}"><button type="button" class="btn btn-sm btn-outline-success add-line"><i class="bi bi-plus-lg"></i> Add line</button></td>
+            {% if L.total %}<td class="text-end fw-bold lines-total">0.00</td>{% endif %}<td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    {% endif %}
+    {% if res.note %}<div class="note mt-3"><i class="bi bi-info-circle"></i> {{ res.note }}</div>{% endif %}
+  </div>
+  <div class="card-footer d-flex flex-wrap gap-2 justify-content-end">
+    <a href="{{ res.url() }}" class="btn btn-light">Cancel</a>
+    {% if is_new %}<button class="btn btn-outline-success" name="_next" value="add">Save &amp; add another</button>{% endif %}
+    <button class="btn btn-success"><i class="bi bi-check2"></i> Save</button>
+  </div>
+</form>
+{% endblock %}

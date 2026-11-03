@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% import 'partials/macros.html' as m with context %}
+{% set page_title = res.title %}
+{% block content %}
+{% if stats %}{{ m.stat_tiles(stats) }}{% endif %}
+
+<div class="card toolbar-card mb-3 no-print">
+  <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+    <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse" data-bs-target="#filters" aria-expanded="{{ 'true' if filters_active else 'false' }}">
+      <i class="bi bi-funnel"></i> {{ 'Hide' if filters_active else 'Show' }} Filters
+    </button>
+    {% if filters_active %}<a href="{{ res.url() }}" class="btn btn-link text-muted">Clear</a>{% endif %}
+    <div class="ms-auto d-flex flex-wrap gap-2">
+      <a class="btn btn-outline-primary" href="{{ res.url('export', **request.args) }}"><i class="bi bi-download"></i> Export</a>
+      {% for label, icon, url_fn in res.actions %}
+        <a class="btn btn-outline-success" href="{{ url_fn() }}"><i class="bi bi-{{ icon }}"></i> {{ label }}</a>
+      {% endfor %}
+      {% if res.addable %}<a class="btn btn-success" href="{{ res.url('new') }}"><i class="bi bi-plus-lg"></i> {{ res.form_title or 'Add' }}</a>{% endif %}
+    </div>
+  </div>
+  <div class="collapse {% if filters_active %}show{% endif %}" id="filters">
+    <form class="card-body border-top row g-2 align-items-end" method="get">
+      {% if res.search %}
+      <div class="col-12 col-md-4 col-lg-3">
+        <label class="form-label small">Search</label>
+        <input class="form-control" name="q" value="{{ request.args.q or '' }}" placeholder="Type to search…">
+      </div>
+      {% endif %}
+      {% for f in res.filters %}
+      <div class="col-6 col-md-4 col-lg-2">
+        <label class="form-label small">{{ f.label }}</label>
+        {% if f.type == 'bool' %}
+          <select class="form-select" name="{{ f.name }}"><option value="">All</option>
+            <option value="1" {% if request.args.get(f.name) == '1' %}selected{% endif %}>Yes</option>
+            <option value="0" {% if request.args.get(f.name) == '0' %}selected{% endif %}>No</option></select>
+        {% elif f.type == 'fk' %}
+          <select class="form-select" name="{{ f.name }}"><option value="">All</option>
+            {% for id, label in f.fk_options() %}<option value="{{ id }}" {% if request.args.get(f.name) == id|string %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+        {% else %}
+          <select class="form-select" name="{{ f.name }}"><option value="">All</option>
+            {% for c in f.choices %}<option {% if request.args.get(f.name) == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% if res.date_field %}
+      <div class="col-6 col-md-3 col-lg-2"><label class="form-label small">From</label><input type="date" class="form-control" name="from" value="{{ request.args.get('from', '') }}"></div>
+      <div class="col-6 col-md-3 col-lg-2"><label class="form-label small">To</label><input type="date" class="form-control" name="to" value="{{ request.args.get('to', '') }}"></div>
+      {% endif %}
+      <input type="hidden" name="per_page" value="{{ per_page }}">
+      <div class="col-auto"><button class="btn btn-success"><i class="bi bi-search"></i> Apply</button></div>
+    </form>
+  </div>
+</div>
+
+{% if res.note %}<div class="note no-print"><i class="bi bi-info-circle"></i> {{ res.note }}</div>{% endif %}
+
+<div class="card table-card">
+  <div class="card-header d-flex align-items-center">
+    <h2 class="card-title-sm mb-0">{{ res.title }}</h2>
+    <button class="btn btn-sm btn-outline-secondary ms-auto no-print" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 data-table">
+      <thead><tr>
+        {% for c in res.columns %}<th class="{% if c.align %}text-{{ c.align }}{% endif %}">{{ c.label }}</th>{% endfor %}
+        {% if res.editable or res.row_actions %}<th class="text-end no-print">Actions</th>{% endif %}
+      </tr></thead>
+      <tbody>
+      {% for o in pg.items %}
+        <tr>
+          {% for c in res.columns %}
+            {% set v = c.value(o) %}
+            <td class="{% if c.align %}text-{{ c.align }}{% endif %}">
+              {%- if c.fmt == 'badge' and v %}<span class="badge text-bg-{{ badge(v) }}">{{ v }}</span>
+              {%- elif c.fmt == 'bool' %}{% if v %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-dash text-muted"></i>{% endif %}
+              {%- else %}{{ fmt_value(v, c.fmt) }}{% endif -%}
+            </td>
+          {% endfor %}
+          {% if res.editable or res.row_actions %}
+          <td class="text-end text-nowrap no-print">
+            {% for label, icon, url_fn in res.row_actions %}
+              <a class="btn btn-sm btn-light" href="{{ url_fn(o) }}" title="{{ label }}"><i class="bi bi-{{ icon }}"></i></a>
+            {% endfor %}
+            {% if res.editable %}<a class="btn btn-sm btn-light" href="{{ res.url('edit', id=o.id) }}" title="Edit"><i class="bi bi-pencil"></i></a>{% endif %}
+            <form method="post" action="{{ res.url('delete', id=o.id) }}" class="d-inline" data-confirm="Delete this {{ res.singular|lower }}? Linked stock and head-count postings are reversed.">
+              {{ m.csrf() }}<button class="btn btn-sm btn-light text-danger" title="Delete"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+      {% else %}
+        {{ m.empty(res.columns|length + 1, 'No ' ~ res.title|lower ~ ' records found.') }}
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer d-flex flex-wrap align-items-center gap-3 no-print">
+    <span class="text-muted small">
+      {% if pg.total %}Showing {{ (pg.page - 1) * pg.per_page + 1 }}–{{ (pg.page - 1) * pg.per_page + pg.items|length }} of {{ pg.total }}{% else %}No records to show{% endif %}
+    </span>
+    <form method="get" class="d-flex align-items-center gap-2">
+      {% for k, v in request.args.items() if k not in ('per_page', 'page') %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+      <span class="small">Show</span>
+      <select class="form-select form-select-sm w-auto" name="per_page" onchange="this.form.submit()">
+        {% for n in (15, 25, 50, 100) %}<option {% if per_page == n %}selected{% endif %}>{{ n }}</option>{% endfor %}
+      </select>
+      <span class="small">per page</span>
+    </form>
+    {% if pg.pages > 1 %}
+    <nav class="ms-auto"><ul class="pagination pagination-sm mb-0">
+      {% set args = request.args.to_dict() %}
+      <li class="page-item {% if not pg.has_prev %}disabled{% endif %}"><a class="page-link" href="{{ res.url(**dict(args, page=pg.prev_num or 1)) }}">‹ Previous</a></li>
+      {% for p in pg.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}<li class="page-item {% if p == pg.page %}active{% endif %}"><a class="page-link" href="{{ res.url(**dict(args, page=p)) }}">{{ p }}</a></li>
+        {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+      {% endfor %}
+      <li class="page-item {% if not pg.has_next %}disabled{% endif %}"><a class="page-link" href="{{ res.url(**dict(args, page=pg.next_num or pg.pages)) }}">Next ›</a></li>
+    </ul></nav>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Receivables' %}
+{% block content %}
+<div class="row g-3 mb-3">{% for b in buckets %}<div class="col"><div class="stat-card {{ 'tone-danger' if b in ('61–90','90+') else 'tone-warning' if b != 'Current' else '' }}"><div class="stat-label">{{ b }}{{ ' days overdue' if b != 'Current' else ' (not yet due)' }}</div><div class="stat-value">{{ money(totals[b]) }}</div></div></div>{% endfor %}</div>
+<div class="card table-card"><div class="card-header d-flex"><h2 class="card-title-sm mb-0">Unpaid invoices</h2><button class="btn btn-sm btn-outline-secondary ms-auto no-print" onclick="window.print()"><i class="bi bi-printer"></i> Print</button></div>
+<div class="table-responsive"><table class="table data-table mb-0"><thead><tr><th>Invoice</th><th>Buyer</th><th>Phone</th><th>Date</th><th>Due</th><th class="text-end">Days overdue</th><th class="text-end">Total</th><th class="text-end">Balance</th></tr></thead>
+<tbody>{% for inv, age, b in rows %}<tr><td><a href="{{ url_for('pages.invoice_view', id=inv.id) }}">{{ inv.number }}</a></td><td>{{ inv.buyer }}</td><td>{{ inv.buyer.phone or '' }}</td><td>{{ dmy(inv.date) }}</td><td>{{ dmy(inv.due_date) }}</td><td class="text-end {{ 'text-danger' if age > 0 }}">{{ age if age > 0 else '–' }}</td><td class="text-end">{{ money(inv.total, false) }}</td><td class="text-end fw-semibold">{{ money(inv.balance, false) }}</td></tr>
+{% else %}{{ m.empty(8, 'Every invoice is paid.') }}{% endfor %}</tbody></table></div></div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends 'base.html' if current_user.is_authenticated else 'pages/error_bare.html' %}
+{% set page_title = 'Error ' ~ code %}
+{% block content %}
+<div class="card"><div class="card-body text-center py-5">
+  <div class="display-5 fw-bold text-success">{{ code }}</div>
+  <p class="lead mt-2">{{ message }}</p>
+  <a href="{{ url_for('pages.dashboard') }}" class="btn btn-success">Back to dashboard</a>
+</div></div>
+{% endblock %}

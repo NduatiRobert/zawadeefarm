@@ -1,0 +1,58 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = g.name %}
+{% block page_sub %} · {{ g.animal_type|upper }} · {{ g.ent|upper }}{% endblock %}
+{% block content %}
+<div class="card toolbar-card mb-3 no-print"><div class="card-body d-flex flex-wrap gap-2">
+  <a class="btn btn-outline-success" href="{{ url_for('crud.usage_new', group_id=g.id) }}"><i class="bi bi-bucket"></i> Issue feed / inputs</a>
+  <a class="btn btn-outline-success" href="{{ url_for('crud.activities_new', group_id=g.id) }}"><i class="bi bi-heart-pulse"></i> Activity</a>
+  <a class="btn btn-outline-danger" href="{{ url_for('crud.activities_new', group_id=g.id, activity_type='Mortality') }}"><i class="bi bi-x-octagon"></i> Mortality</a>
+  {% if g.animal_type in ('Layer chicken', 'Kienyeji chicken', 'Cattle', 'Goat') %}<a class="btn btn-outline-success" href="{{ url_for('crud.production_new', group_id=g.id) }}"><i class="bi bi-egg"></i> Production</a>{% endif %}
+  <a class="btn btn-outline-success" href="{{ url_for('crud.weights_new', group_id=g.id) }}"><i class="bi bi-speedometer"></i> Weigh</a>
+  <a class="btn btn-outline-primary" href="{{ url_for('crud.invoices_new') }}"><i class="bi bi-cash-coin"></i> Sell</a>
+  <a class="btn btn-light ms-auto" href="{{ url_for('crud.groups_edit', id=g.id) }}"><i class="bi bi-pencil"></i> Edit group</a>
+  <button class="btn btn-light" onclick="window.print()"><i class="bi bi-printer"></i></button>
+</div></div>
+
+{{ m.stat_tiles([
+  dict(label='Current head count', value=g.current_count ~ ' of ' ~ g.opening_count ~ ' placed', tone='success', fmt='text', icon='collection'),
+  dict(label='Mortality', value=g.mortality_pct ~ '% (' ~ g.deaths ~ ' dead)', tone='danger', fmt='text', icon='activity'),
+  dict(label='Age', value=(g.age_weeks ~ ' weeks') if g.age_weeks is not none else '–', tone='secondary', fmt='text', icon='hourglass'),
+  dict(label='Feed used', value=num(feed_kg) ~ ' kg', tone='warning', fmt='text', icon='bucket'),
+]) }}
+{{ m.stat_tiles([
+  dict(label='Total cost so far', value=total_cost, tone='danger', fmt='money', icon='cash'),
+  dict(label='Cost per head', value=money(cost_per_head) if cost_per_head else '–', tone='secondary', fmt='text', icon='calculator'),
+  dict(label='Sales income', value=income, tone='success', fmt='money', icon='cash-stack'),
+  dict(label='FCR · daily gain', value=(fcr if fcr else '–') ~ ' · ' ~ ((adg|int ~ ' g/day') if adg else '–'), tone='primary', fmt='text', icon='speedometer2'),
+]) }}
+
+<div class="card">
+  <div class="card-header pb-0 border-0">
+    <ul class="nav nav-tabs card-header-tabs" role="tablist">
+      {% for key, label in [('acts','Activities'),('feed','Feed & inputs'),('heads','Head count'),('prod','Production'),('weights','Weights'),('sales','Sales')] %}
+      <li class="nav-item"><button class="nav-link {% if loop.first %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#t-{{ key }}" type="button">{{ label }}</button></li>{% endfor %}
+    </ul>
+  </div>
+  <div class="tab-content">
+    <div class="tab-pane show active" id="t-acts"><div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Date</th><th>Type</th><th class="text-end">Count</th><th>Input used</th><th>Description</th><th class="text-end">Cash cost</th><th>Next due</th></tr></thead>
+      <tbody>{% for a in activities %}<tr><td>{{ dmy(a.date) }}</td><td>{{ a.activity_type }}</td><td class="text-end">{{ a.affected_count or '' }}</td><td>{{ (a.stock_item.name ~ ' × ' ~ num(a.quantity_used)) if a.stock_item else '' }}</td><td>{{ a.description or '' }}</td><td class="text-end">{{ money(a.cost, false) if a.cost else '' }}</td><td>{{ dmy(a.next_due_date) }}</td></tr>
+      {% else %}{{ m.empty(7, 'No activities recorded.') }}{% endfor %}</tbody></table></div></div>
+    <div class="tab-pane" id="t-feed"><div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Date</th><th>Item</th><th class="text-end">Qty</th><th class="text-end">Cost</th><th>Notes</th></tr></thead>
+      <tbody>{% for u in usage %}<tr><td>{{ dmy(u.date) }}</td><td>{{ u.item.name }}</td><td class="text-end">{{ num(-u.quantity) }} {{ u.item.unit }}</td><td class="text-end">{{ money(-u.total_cost, false) }}</td><td>{{ u.notes or '' }}</td></tr>
+      {% else %}{{ m.empty(5, 'No feed or inputs issued to this group yet.') }}{% endfor %}</tbody></table></div></div>
+    <div class="tab-pane" id="t-heads"><div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Date</th><th>Change</th><th class="text-end">Head</th><th>Notes</th></tr></thead>
+      <tbody><tr><td>{{ dmy(g.placement_date) }}</td><td>Placed</td><td class="text-end">+{{ g.opening_count }}</td><td></td></tr>
+      {% for mv in movements %}<tr><td>{{ dmy(mv.date) }}</td><td class="text-capitalize">{{ mv.kind }}</td><td class="text-end {{ 'text-danger' if mv.quantity < 0 else 'text-success' }}">{{ '%+d'|format(mv.quantity) }}</td><td>{{ mv.notes or '' }}</td></tr>{% endfor %}</tbody></table></div></div>
+    <div class="tab-pane" id="t-prod"><div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Date</th><th>Product</th><th>Grade</th><th class="text-end">Qty</th><th class="text-end">Value</th></tr></thead>
+      <tbody>{% for p in production %}<tr><td>{{ dmy(p.date) }}</td><td>{{ p.product }}</td><td>{{ p.grade or '' }}</td><td class="text-end">{{ num(p.quantity) }}</td><td class="text-end">{{ money(p.value, false) }}</td></tr>
+      {% else %}{{ m.empty(5, 'No production recorded.') }}{% endfor %}</tbody></table></div></div>
+    <div class="tab-pane" id="t-weights"><div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Date</th><th class="text-end">Sample</th><th class="text-end">Avg weight (kg)</th><th>Notes</th></tr></thead>
+      <tbody>{% for w in weights|reverse %}<tr><td>{{ dmy(w.date) }}</td><td class="text-end">{{ w.sample_size }}</td><td class="text-end">{{ num(w.avg_weight) }}</td><td>{{ w.notes or '' }}</td></tr>
+      {% else %}{{ m.empty(4, 'No weights recorded. Weigh a sample weekly to track growth and FCR.') }}{% endfor %}</tbody></table></div></div>
+    <div class="tab-pane" id="t-sales"><div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Invoice</th><th>Buyer</th><th>Description</th><th class="text-end">Heads</th><th class="text-end">Amount</th></tr></thead>
+      <tbody>{% for l in sales %}<tr><td><a href="{{ url_for('pages.invoice_view', id=l.invoice.id) }}">{{ l.invoice.number }}</a> · {{ dmy(l.invoice.date) }}</td><td>{{ l.invoice.buyer }}</td><td>{{ l.description }}</td><td class="text-end">{{ l.heads_sold or '' }}</td><td class="text-end">{{ money(l.amount, false) }}</td></tr>
+      {% else %}{{ m.empty(5, 'No sales from this group yet.') }}{% endfor %}</tbody></table></div></div>
+  </div>
+</div>
+{% if g.notes %}<div class="note mt-3">{{ g.notes }}</div>{% endif %}
+{% endblock %}

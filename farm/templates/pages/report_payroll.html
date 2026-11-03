@@ -1,0 +1,10 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Payroll Returns' %}
+{% block content %}
+<div class="note">The amounts to remit each month: PAYE to KRA (iTax P10), NSSF employee plus employer, SHIF to SHA, and the Affordable Housing Levy employee plus employer (KRA). Returns are normally due by the 9th of the following month.</div>
+<div class="card table-card"><div class="card-header d-flex"><h2 class="card-title-sm mb-0">Statutory remittances by month</h2><button class="btn btn-sm btn-outline-secondary ms-auto no-print" onclick="window.print()"><i class="bi bi-printer"></i> Print</button></div>
+<div class="table-responsive"><table class="table data-table mb-0"><thead><tr><th>Month</th><th>Status</th><th class="text-end">Gross pay</th><th class="text-end">PAYE (KRA)</th><th class="text-end">NSSF (2 × employee)</th><th class="text-end">SHIF (SHA)</th><th class="text-end">Housing levy (2 × employee)</th><th class="text-end">Total to remit</th><th class="text-end">Net salaries</th></tr></thead>
+<tbody>{% for r in runs %}{% set nssf = r.total('nssf') + r.total('employer_nssf') %}{% set ahl = r.total('housing_levy') + r.total('employer_housing') %}
+<tr><td><a href="{{ url_for('payroll.run_detail', id=r.id) }}">{{ r.period }}</a></td><td><span class="badge text-bg-{{ badge(r.status) }}">{{ r.status }}</span></td><td class="text-end">{{ money(r.total('gross'), false) }}</td><td class="text-end">{{ money(r.total('paye'), false) }}</td><td class="text-end">{{ money(nssf, false) }}</td><td class="text-end">{{ money(r.total('shif'), false) }}</td><td class="text-end">{{ money(ahl, false) }}</td><td class="text-end fw-bold">{{ money(r.total('paye') + nssf + r.total('shif') + ahl, false) }}</td><td class="text-end">{{ money(r.total('net'), false) }}</td></tr>
+{% else %}{{ m.empty(9, 'No payroll runs yet.') }}{% endfor %}</tbody></table></div></div>
+{% endblock %}

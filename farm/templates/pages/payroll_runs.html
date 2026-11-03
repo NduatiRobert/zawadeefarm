@@ -1,0 +1,16 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Payroll' %}
+{% block content %}
+<form method="post" action="{{ url_for('payroll.new_run') }}" class="card toolbar-card mb-3">{{ m.csrf() }}
+  <div class="card-body d-flex flex-wrap gap-2 align-items-end">
+    <div><label class="form-label small">Payroll month</label><input type="month" class="form-control" name="period" value="{{ default_period }}" required></div>
+    <button class="btn btn-success"><i class="bi bi-plus-lg"></i> Run payroll</button>
+    <div class="small text-muted ms-md-3 align-self-center" style="max-width:520px">Creates a payslip for every permanent and contract employee. Daily-paid staff are paid for attendance days, and overtime is paid at 1.5×. PAYE, NSSF, SHIF and the Housing Levy are calculated from the rates in Settings.</div>
+  </div>
+</form>
+<div class="card table-card"><div class="table-responsive"><table class="table data-table align-middle mb-0">
+  <thead><tr><th>Month</th><th class="text-end">Staff</th><th class="text-end">Gross</th><th class="text-end">PAYE</th><th class="text-end">NSSF</th><th class="text-end">SHIF</th><th class="text-end">Housing levy</th><th class="text-end">Net pay</th><th class="text-end">Employer cost</th><th>Status</th><th></th></tr></thead>
+  <tbody>{% for r in runs %}<tr><td>{{ r.period }}</td><td class="text-end">{{ r.payslips|length }}</td><td class="text-end">{{ money(r.total('gross'), false) }}</td><td class="text-end">{{ money(r.total('paye'), false) }}</td><td class="text-end">{{ money(r.total('nssf'), false) }}</td><td class="text-end">{{ money(r.total('shif'), false) }}</td><td class="text-end">{{ money(r.total('housing_levy'), false) }}</td><td class="text-end fw-semibold">{{ money(r.total('net'), false) }}</td><td class="text-end">{{ money(r.payslips|sum(attribute='employer_cost'), false) }}</td>
+    <td><span class="badge text-bg-{{ badge(r.status) }}">{{ r.status }}</span></td><td class="text-end"><a class="btn btn-sm btn-light" href="{{ url_for('payroll.run_detail', id=r.id) }}"><i class="bi bi-eye"></i></a></td></tr>
+  {% else %}{{ m.empty(11, 'No payroll runs yet. Add employees, then run payroll for a month.') }}{% endfor %}</tbody></table></div></div>
+{% endblock %}

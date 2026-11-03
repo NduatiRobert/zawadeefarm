@@ -1,0 +1,24 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Settings' %}
+{% block content %}
+<form method="post" class="card form-card">
+  {{ m.csrf() }}
+  <div class="card-body">
+    <h3 class="section-title">Farm details</h3>
+    <div class="row g-3 mb-4">
+      {% for k in ['farm_name','farm_tagline','farm_location','farm_phone','farm_email','farm_kra_pin','currency','invoice_terms_days','eggs_per_tray'] %}
+      <div class="col-md-4"><label class="form-label">{{ labels[k] }}</label><input class="form-control" name="{{ k }}" value="{{ values[k] }}"></div>
+      {% endfor %}
+      <div class="col-12"><label class="form-label">{{ labels.payment_instructions }}</label><textarea class="form-control" name="payment_instructions" rows="2">{{ values.payment_instructions }}</textarea></div>
+    </div>
+    <h3 class="section-title">Statutory payroll rates</h3>
+    <div class="note">Defaults follow Kenyan rates in force from February 2026: PAYE bands 10/25/30/32.5/35%, personal relief KES 2,400, NSSF 6% up to KES 108,000, SHIF 2.75% (minimum KES 300) and Housing Levy 1.5%. NSSF, SHIF and the Housing Levy are deducted before PAYE. Update these when KRA, NSSF or SHA change rates, and have your accountant confirm.</div>
+    <div class="row g-3">
+      {% for k in ['personal_relief','nssf_rate','nssf_lel','nssf_uel','shif_rate','shif_min','housing_levy_rate'] %}
+      <div class="col-md-4 col-lg-3"><label class="form-label">{{ labels[k] }}</label><input class="form-control text-end" type="number" step="any" name="{{ k }}" value="{{ values[k] }}"></div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="card-footer text-end"><button class="btn btn-success"><i class="bi bi-check2"></i> Save settings</button></div>
+</form>
+{% endblock %}

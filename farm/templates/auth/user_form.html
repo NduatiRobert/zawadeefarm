@@ -1,0 +1,17 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Edit user' if user.id else 'New user' %}
+{% block content %}
+<form method="post" class="card form-card" style="max-width:640px">
+  {{ m.csrf() }}
+  <div class="card-body row g-3">
+    <div class="col-md-6"><label class="form-label">Full name *</label><input name="name" class="form-control" required value="{{ request.form.name or user.name or '' }}"></div>
+    <div class="col-md-6"><label class="form-label">Email *</label><input name="email" type="email" class="form-control" required value="{{ request.form.email or user.email or '' }}"></div>
+    <div class="col-md-6"><label class="form-label">Role</label><select name="role" class="form-select">
+      {% for k, v in roles.items() %}<option value="{{ k }}" {% if (request.form.role or user.role) == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+    <div class="col-md-6"><label class="form-label">{{ 'New password (leave blank to keep)' if user.id else 'Password *' }}</label>
+      <input name="password" type="password" class="form-control" minlength="8" autocomplete="new-password" {% if not user.id %}required{% endif %}></div>
+    <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="active" value="1" id="active" {% if user.is_active_user is none or user.is_active_user %}checked{% endif %}><label class="form-check-label" for="active">Account active</label></div></div>
+  </div>
+  <div class="card-footer d-flex justify-content-end gap-2"><a href="{{ url_for('auth.users') }}" class="btn btn-light">Cancel</a><button class="btn btn-success">Save user</button></div>
+</form>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Users' %}
+{% block content %}
+<div class="card toolbar-card mb-3"><div class="card-body d-flex">
+  <div class="text-muted small align-self-center">Each person signs in with their own account. Their role decides which menus they see.</div>
+  <a class="btn btn-success ms-auto" href="{{ url_for('auth.user_form') }}"><i class="bi bi-plus-lg"></i> Add user</a></div></div>
+<div class="card table-card"><div class="table-responsive"><table class="table data-table align-middle mb-0">
+  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last login</th><th class="text-end">Actions</th></tr></thead>
+  <tbody>{% for u in users %}
+    <tr><td>{{ u.name }}</td><td>{{ u.email }}</td><td>{{ u.role_label }}</td>
+      <td><span class="badge text-bg-{{ 'success' if u.is_active_user else 'secondary' }}">{{ 'Active' if u.is_active_user else 'Disabled' }}</span></td>
+      <td>{{ u.last_login.strftime('%d %b %Y %H:%M') if u.last_login else '—' }}</td>
+      <td class="text-end"><a class="btn btn-sm btn-light" href="{{ url_for('auth.user_form', id=u.id) }}"><i class="bi bi-pencil"></i></a></td></tr>
+  {% endfor %}</tbody></table></div></div>
+<div class="card mt-3"><div class="card-body small">
+  <strong>Roles</strong>
+  <ul class="mb-0 mt-2">
+    <li><b>Administrator</b>: everything, including users and settings.</li>
+    <li><b>Farm manager</b>: all operations, sales, payroll and reports.</li>
+    <li><b>Accountant</b>: store purchases, sales, expenses, staff, payroll and reports.</li>
+    <li><b>Storekeeper</b>: store, stock requests, usage and the feed mill.</li>
+    <li><b>Livestock supervisor</b>: livestock records, activities, production and the feed mill.</li>
+  </ul></div></div>
+{% endblock %}

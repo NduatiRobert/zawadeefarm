@@ -1,0 +1,18 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = item.name %}
+{% block page_sub %} · STOCK CARD{% endblock %}
+{% block content %}
+{{ m.stat_tiles([
+  dict(label='Balance', value=num(item.quantity) ~ ' ' ~ item.unit, tone='success', fmt='text', icon='box-seam'),
+  dict(label='Average cost', value=item.avg_cost, tone='secondary', fmt='money', icon='calculator'),
+  dict(label='Stock value', value=item.value, tone='primary', fmt='money', icon='cash'),
+  dict(label='Re-order level', value=num(item.reorder_level) ~ ' ' ~ item.unit, tone='danger' if item.is_low else 'warning', fmt='text', icon='exclamation-triangle'),
+]) }}
+<div class="card table-card"><div class="card-header d-flex gap-2"><a href="{{ url_for('crud.items_list') }}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i></a><h2 class="card-title-sm mb-0 align-self-center">Movements</h2>
+  <a href="{{ url_for('pages.item_adjust', id=item.id) }}" class="btn btn-sm btn-outline-success ms-auto"><i class="bi bi-sliders"></i> Adjust / opening stock</a></div>
+<div class="table-responsive"><table class="table data-table mb-0"><thead><tr><th>Date</th><th>Type</th><th>Reference</th><th>Group / enterprise</th><th class="text-end">In</th><th class="text-end">Out</th><th class="text-end">Balance</th><th class="text-end">Unit cost</th><th class="text-end">Value</th><th>Notes</th></tr></thead>
+<tbody>{% for mv, bal in rows %}<tr><td>{{ dmy(mv.date) }}</td><td class="text-capitalize">{{ mv.kind.replace('_', ' ') }}</td><td>{{ mv.ref }}</td><td>{{ mv.group or mv.enterprise or '' }}</td>
+  <td class="text-end text-success">{{ num(mv.quantity) if mv.quantity > 0 else '' }}</td><td class="text-end text-danger">{{ num(-mv.quantity) if mv.quantity < 0 else '' }}</td>
+  <td class="text-end fw-semibold">{{ num(bal) }}</td><td class="text-end">{{ money(mv.unit_cost, false) }}</td><td class="text-end">{{ money(mv.total_cost, false) }}</td><td>{{ mv.notes or '' }}</td></tr>
+{% else %}{{ m.empty(10, 'No movements yet. Record a purchase or enter opening stock.') }}{% endfor %}</tbody></table></div></div>
+{% endblock %}

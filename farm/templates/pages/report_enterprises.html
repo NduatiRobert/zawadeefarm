@@ -1,0 +1,21 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Enterprise Performance' %}
+{% block page_sub %} · {{ dmy(start) }} – {{ dmy(end) }}{% endblock %}
+{% block content %}
+<form class="card toolbar-card mb-3 no-print"><div class="card-body d-flex flex-wrap gap-2 align-items-end">
+  <div><label class="form-label small">From</label><input type="date" class="form-control" name="from" value="{{ start.isoformat() }}"></div>
+  <div><label class="form-label small">To</label><input type="date" class="form-control" name="to" value="{{ end.isoformat() }}"></div>
+  <button class="btn btn-success">Apply</button></div></form>
+{% set rows = p.by_enterprise.items()|sort(attribute='1.net', reverse=true) %}
+{% set maxv = namespace(v=1) %}{% for e, r in rows %}{% if r.income > maxv.v %}{% set maxv.v = r.income %}{% endif %}{% if r.costs > maxv.v %}{% set maxv.v = r.costs %}{% endif %}{% endfor %}
+<div class="card"><div class="card-header d-flex flex-wrap"><h2 class="card-title-sm mb-0">Ranked by net profit</h2>
+  <div class="legend ms-auto"><span><span class="dot" style="background:#1b7f4c"></span>Income</span><span><span class="dot" style="background:#7c5cc4"></span>Costs</span></div></div>
+<div class="table-responsive"><table class="table data-table align-middle mb-0"><thead><tr><th>#</th><th>Enterprise</th><th style="min-width:240px">Income vs costs</th><th class="text-end">Income</th><th class="text-end">Costs</th><th class="text-end">Net</th><th class="text-end">Margin</th></tr></thead>
+<tbody>{% for e, r in rows %}<tr><td>{{ loop.index }}</td><td class="fw-semibold">{{ e }}</td>
+  <td><div class="progress mb-1" style="height:7px;background:#f1f3ef" title="Income {{ money(r.income) }}"><div class="progress-bar" style="width:{{ r.income * 100 / maxv.v }}%;background:#1b7f4c;border-radius:4px"></div></div>
+      <div class="progress" style="height:7px;background:#f1f3ef" title="Costs {{ money(r.costs) }}"><div class="progress-bar" style="width:{{ r.costs * 100 / maxv.v }}%;background:#7c5cc4;border-radius:4px"></div></div></td>
+  <td class="text-end">{{ money(r.income, false) }}</td><td class="text-end">{{ money(r.costs, false) }}</td>
+  <td class="text-end fw-bold {{ 'text-danger' if r.net < 0 else 'text-success' }}">{% if r.net < 0 %}<i class="bi bi-caret-down-fill"></i>{% else %}<i class="bi bi-caret-up-fill"></i>{% endif %} {{ money(r.net, false) }}</td>
+  <td class="text-end">{{ ((r.net * 100 / r.income)|round(1) ~ '%') if r.income else '–' }}</td></tr>
+{% else %}{{ m.empty(7, 'No income or costs in this period.') }}{% endfor %}</tbody></table></div></div>
+{% endblock %}

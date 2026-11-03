@@ -1,0 +1,20 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Stock & Usage' %}
+{% block page_sub %} · USAGE {{ dmy(start) }} – {{ dmy(end) }}{% endblock %}
+{% block content %}
+<form class="card toolbar-card mb-3 no-print"><div class="card-body d-flex flex-wrap gap-2 align-items-end">
+  <div><label class="form-label small">Usage from</label><input type="date" class="form-control" name="from" value="{{ start.isoformat() }}"></div>
+  <div><label class="form-label small">To</label><input type="date" class="form-control" name="to" value="{{ end.isoformat() }}"></div>
+  <button class="btn btn-success">Apply</button><button type="button" class="btn btn-outline-secondary ms-auto" onclick="window.print()"><i class="bi bi-printer"></i> Print</button></div></form>
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card table-card"><div class="card-header"><h2 class="card-title-sm mb-0">Stock valuation (today)</h2></div>
+    <div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Item</th><th>Category</th><th class="text-end">Qty</th><th class="text-end">Avg cost</th><th class="text-end">Value</th></tr></thead>
+    <tbody>{% for i in items %}<tr><td>{{ i.name }}{% if i.is_low %} <span class="badge text-bg-danger">Low</span>{% endif %}</td><td>{{ i.category }}</td><td class="text-end">{{ num(i.quantity) }} {{ i.unit }}</td><td class="text-end">{{ money(i.avg_cost, false) }}</td><td class="text-end">{{ money(i.value, false) }}</td></tr>{% else %}{{ m.empty(5, 'No items.') }}{% endfor %}</tbody>
+    <tfoot>{% for c, v in by_cat.items() %}<tr><td colspan="4" class="text-end small">{{ c }}</td><td class="text-end small">{{ money(v, false) }}</td></tr>{% endfor %}
+      <tr class="fw-bold"><td colspan="4" class="text-end">Total stock value</td><td class="text-end">{{ money(by_cat.values()|sum) }}</td></tr></tfoot></table></div></div></div>
+  <div class="col-lg-6"><div class="card table-card"><div class="card-header"><h2 class="card-title-sm mb-0">Usage by enterprise</h2></div>
+    <div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Enterprise</th><th>Item</th><th class="text-end">Qty used</th><th class="text-end">Cost</th></tr></thead>
+    <tbody>{% for key, val in usage %}<tr><td>{{ key[0] }}</td><td>{{ key[1] }}</td><td class="text-end">{{ num(val[0]) }} {{ key[2] }}</td><td class="text-end">{{ money(val[1], false) }}</td></tr>{% else %}{{ m.empty(4, 'No usage in this period.') }}{% endfor %}</tbody>
+    <tfoot><tr class="fw-bold"><td colspan="3" class="text-end">Total</td><td class="text-end">{{ money(usage|map(attribute='1')|map(attribute='1')|sum) }}</td></tr></tfoot></table></div></div></div>
+</div>
+{% endblock %}

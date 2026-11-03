@@ -1,0 +1,53 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Profit & Loss' %}
+{% block page_sub %} · {{ dmy(start) }} – {{ dmy(end) }}{% endblock %}
+{% block content %}
+<form class="card toolbar-card mb-3 no-print"><div class="card-body d-flex flex-wrap gap-2 align-items-end">
+  <div><label class="form-label small">From</label><input type="date" class="form-control" name="from" value="{{ start.isoformat() }}"></div>
+  <div><label class="form-label small">To</label><input type="date" class="form-control" name="to" value="{{ end.isoformat() }}"></div>
+  <button class="btn btn-success">Apply</button>
+  <div class="ms-auto d-flex gap-2"><a class="btn btn-outline-primary" href="{{ url_for('reports.profit_loss', **{'from': start.isoformat(), 'to': end.isoformat(), 'format': 'csv'}) }}"><i class="bi bi-download"></i> Export</a>
+  <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Print</button></div>
+</div></form>
+{{ m.stat_tiles([
+  dict(label='Income', value=p.total_income, tone='success', fmt='money', icon='arrow-up-circle'),
+  dict(label='Costs', value=p.total_costs, tone='danger', fmt='money', icon='arrow-down-circle'),
+  dict(label='Net profit / (loss)', value=p.net, tone='success' if p.net >= 0 else 'danger', fmt='money', icon='graph-up-arrow'),
+  dict(label='Margin', value=((p.net * 100 / p.total_income)|round(1) ~ '%') if p.total_income else '–', tone='primary', fmt='text', icon='percent'),
+]) }}
+<div class="card table-card mb-3"><div class="card-header"><h2 class="card-title-sm mb-0">Statement by enterprise</h2></div>
+<div class="table-responsive"><table class="table data-table mb-0">
+  <thead><tr><th></th>{% for e in ents %}<th class="text-end">{{ e }}</th>{% endfor %}<th class="text-end">Total</th></tr></thead>
+  <tbody>
+    <tr class="table-success"><td class="fw-bold">Sales income</td>{% for e in ents %}<td class="text-end">{{ money(p.income.get(e, 0), false) }}</td>{% endfor %}<td class="text-end fw-bold">{{ money(p.total_income, false) }}</td></tr>
+    <tr><td colspan="{{ ents|length + 2 }}" class="fw-bold small text-uppercase text-muted pt-3">Costs</td></tr>
+    {% for c in cats %}<tr><td class="ps-4">{{ c }}</td>{% for e in ents %}<td class="text-end">{{ money(matrix[c][e], false) if matrix[c][e] else '–' }}</td>{% endfor %}<td class="text-end">{{ money(p.by_category[c], false) }}</td></tr>{% endfor %}
+    <tr class="fw-bold"><td>Total costs</td>{% for e in ents %}<td class="text-end">{{ money(p.by_enterprise[e].costs, false) }}</td>{% endfor %}<td class="text-end">{{ money(p.total_costs, false) }}</td></tr>
+    <tr class="fw-bold table-light"><td>Net profit / (loss)</td>{% for e in ents %}{% set n = p.by_enterprise[e].net %}<td class="text-end {{ 'text-danger' if n < 0 else 'text-success' }}">{{ money(n, false) }}</td>{% endfor %}<td class="text-end {{ 'text-danger' if p.net < 0 else 'text-success' }}">{{ money(p.net, false) }}</td></tr>
+  </tbody></table></div>
+  <div class="card-footer small text-muted">Costs include store items <em>used</em> (at average cost), expenses, activity cash costs, approved payroll (gross plus employer NSSF and housing levy), casual labour, and livestock bought. Stock still in the store is not a cost yet. Feed milled on the farm is costed when it is fed. “General” holds shared overheads.</div>
+</div>
+<div class="card no-print"><div class="card-header d-flex flex-wrap"><h2 class="card-title-sm mb-0">Monthly trend · 12 months to {{ end.strftime('%b %Y') }}</h2>
+  <div class="legend ms-auto"><span><span class="dot" style="background:#1b7f4c"></span>Income</span><span><span class="dot" style="background:#7c5cc4"></span>Costs</span></div></div>
+  <div class="card-body"><div class="chart-box"><canvas id="trend" role="img" aria-label="Monthly income and costs"></canvas></div>
+  <details class="mt-2 small"><summary>View as table</summary><table class="table table-sm mini-table mt-2"><thead><tr><th>Month</th><th class="text-end">Income</th><th class="text-end">Costs</th><th class="text-end">Net</th></tr></thead>
+  <tbody>{% for r in series %}<tr><td>{{ r.label }}</td><td class="text-end">{{ money(r.income, false) }}</td><td class="text-end">{{ money(r.costs, false) }}</td><td class="text-end">{{ money(r.net, false) }}</td></tr>{% endfor %}</tbody></table></details></div></div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/chart.umd.js') }}"></script>
+<script>
+(function () {
+  const d = {{ series|tojson }}; const cur = {{ S.get('currency')|tojson }};
+  const fmt = (v) => cur + " " + Number(v).toLocaleString(undefined, {maximumFractionDigits: 0});
+  new Chart(document.getElementById("trend"), {type: "bar",
+    data: {labels: d.map((x) => x.label), datasets: [
+      {label: "Income", data: d.map((x) => x.income), backgroundColor: "#1b7f4c", borderRadius: 4, borderSkipped: "bottom", maxBarThickness: 22},
+      {label: "Costs", data: d.map((x) => x.costs), backgroundColor: "#7c5cc4", borderRadius: 4, borderSkipped: "bottom", maxBarThickness: 22}]},
+    options: {maintainAspectRatio: false, interaction: {mode: "index", intersect: false},
+      plugins: {legend: {display: false}, tooltip: {callbacks: {label: (c) => " " + c.dataset.label + ": " + fmt(c.parsed.y),
+        footer: (i) => "Net: " + fmt(i[0].parsed.y - (i[1] ? i[1].parsed.y : 0))}}},
+      scales: {x: {grid: {display: false}}, y: {beginAtZero: true, grid: {color: "#eef1ec"}, border: {display: false},
+        ticks: {callback: (v) => Number(v).toLocaleString(undefined, {notation: "compact"})}}}}});
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Livestock Dashboard' %}
+{% block content %}
+{{ m.stat_tiles([
+  dict(label='Active animals', value=active, tone='success', fmt='int', icon='heart-pulse'),
+  dict(label='Due follow-ups (7 days)', value=followups, tone='warning', fmt='int', icon='bell'),
+  dict(label='Production value · this month', value=prod_value, tone='primary', fmt='money', icon='droplet'),
+  dict(label='Livestock sales · this month', value=sales_value, tone='success', fmt='money', icon='cash-stack'),
+]) }}
+
+<h2 class="section-head">🐖 Pig unit</h2>
+{{ m.stat_tiles([
+  dict(label='Pigs on farm', value=pigs, tone='warning', fmt='int', icon='piggy-bank'),
+  dict(label='Sows · boars', value=sows ~ ' · ' ~ boars, tone='secondary', fmt='text', icon='gender-ambiguous'),
+  dict(label='Avg born alive / litter (6 mo)', value=avg_litter if avg_litter is not none else '–', tone='success', fmt='text', icon='stars'),
+  dict(label='Pre-weaning mortality (6 mo)', value=(prewean ~ '%') if prewean is not none else '–', tone='danger', fmt='text', icon='activity'),
+]) }}
+<div class="row g-3 mb-4">
+  <div class="col-lg-7"><div class="card h-100"><div class="card-header"><h3 class="card-title-sm mb-0">Pig groups</h3></div>
+    <div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Group</th><th>Purpose</th><th class="text-end">Head</th><th class="text-end">Age (wks)</th><th class="text-end">Mortality</th><th>Market date</th></tr></thead>
+    <tbody>{% for g in pig_groups %}<tr><td><a href="{{ url_for('pages.group_detail', id=g.id) }}">{{ g.name }}</a></td><td>{{ g.purpose or '' }}</td><td class="text-end">{{ g.current_count }}</td><td class="text-end">{{ g.age_weeks }}</td><td class="text-end">{{ g.mortality_pct }}%</td><td>{{ dmy(g.target_market_date) }}</td></tr>
+    {% else %}{{ m.empty(6, 'No pig groups yet.') }}{% endfor %}</tbody></table></div></div></div>
+  <div class="col-lg-5"><div class="card h-100"><div class="card-header d-flex"><h3 class="card-title-sm mb-0">Farrowings due (30 days)</h3><a class="ms-auto small" href="{{ url_for('crud.breeding_new') }}">+ Service</a></div>
+    <div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Sow</th><th>Served</th><th>Due</th><th>Status</th></tr></thead>
+    <tbody>{% for b in farrow_due %}<tr><td>{{ b.female }}</td><td>{{ dmy(b.service_date) }}</td><td class="{{ 'text-danger fw-semibold' if b.expected_date and b.expected_date <= today }}">{{ dmy(b.expected_date) }}</td><td><span class="badge text-bg-{{ badge(b.status) }}">{{ b.status }}</span></td></tr>
+    {% else %}{{ m.empty(4, 'No farrowings due.') }}{% endfor %}</tbody></table></div></div></div>
+</div>
+
+<h2 class="section-head">🐔 Poultry unit</h2>
+{{ m.stat_tiles([
+  dict(label='Birds on farm', value=birds, tone='success', fmt='int', icon='egg'),
+  dict(label='Mortality (active flocks)', value=poultry_mortality ~ '%', tone='danger', fmt='text', icon='activity'),
+  dict(label='Egg trays · this month', value=egg_trays, tone='primary', fmt='number', icon='grid-3x3-gap'),
+  dict(label='Laying rate (7 days) · Broiler FCR', value=((lay_rate ~ '%') if lay_rate is not none else '–') ~ ' · ' ~ (fcr if fcr else '–'), tone='warning', fmt='text', icon='speedometer2'),
+]) }}
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header"><h3 class="card-title-sm mb-0">Flock performance</h3></div>
+    <div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Flock</th><th>Type</th><th class="text-end">Week</th><th class="text-end">Current</th><th class="text-end">Mortality</th></tr></thead>
+    <tbody>{% for g in poultry %}<tr><td><a href="{{ url_for('pages.group_detail', id=g.id) }}">{{ g.name }}</a></td><td>{{ g.animal_type }}</td><td class="text-end">{{ g.age_weeks }}</td><td class="text-end">{{ '{:,}'.format(g.current_count) }}</td><td class="text-end">{{ g.mortality_pct }}%</td></tr>
+    {% else %}{{ m.empty(5, 'No poultry flock groups yet.') }}{% endfor %}</tbody></table></div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header"><h3 class="card-title-sm mb-0">Egg grades · this month</h3></div>
+    <div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Grade</th><th class="text-end">Eggs</th><th class="text-end">Trays</th></tr></thead>
+    <tbody>{% for grade, qty in grades %}<tr><td>{{ grade or 'Ungraded' }}</td><td class="text-end">{{ '{:,}'.format(qty|int) }}</td><td class="text-end">{{ num(qty / per_tray) }}</td></tr>
+    {% else %}{{ m.empty(3, 'No egg production records yet.') }}{% endfor %}</tbody></table></div></div></div>
+  <div class="col-12"><div class="card"><div class="card-header d-flex"><h3 class="card-title-sm mb-0">Vaccination &amp; treatment schedule</h3><a class="ms-auto small" href="{{ url_for('crud.activities_new', activity_type='Vaccination') }}">+ Record vaccination</a></div>
+    <div class="table-responsive"><table class="table mini-table mb-0"><thead><tr><th>Due</th><th>Group / animal</th><th>Activity</th><th>Details</th><th>Status</th></tr></thead>
+    <tbody>{% for a in schedule %}<tr><td>{{ dmy(a.next_due_date) }}</td><td>{{ a.group or a.animal or '' }}</td><td>{{ a.activity_type }}</td><td>{{ a.description or '' }}</td>
+      <td>{% if a.next_due_date < today %}<span class="badge text-bg-danger">Overdue</span>{% elif a.next_due_date <= soon %}<span class="badge text-bg-warning">Due soon</span>{% else %}<span class="badge text-bg-secondary">Scheduled</span>{% endif %}</td></tr>
+    {% else %}{{ m.empty(5, 'No upcoming follow-ups. Set a “next due date” when you record a vaccination.') }}{% endfor %}</tbody></table></div></div></div>
+</div>
+{% endblock %}

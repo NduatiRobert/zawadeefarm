@@ -1,0 +1,24 @@
+# One-click deploy on Render (render.com): web service + managed PostgreSQL.
+services:
+  - type: web
+    name: zawadeefarm
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 3 -b 0.0.0.0:$PORT --timeout 60 wsgi:app
+    healthCheckPath: /healthz
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SESSION_COOKIE_SECURE
+        value: "1"
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: zawadeefarm-db
+          property: connectionString
+databases:
+  - name: zawadeefarm-db
+    plan: basic-256mb

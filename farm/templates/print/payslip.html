@@ -1,0 +1,17 @@
+{% extends 'print/base_print.html' %}
+{% block title %}Payslip {{ s.employee.name }} {{ s.run.period }}{% endblock %}
+{% block doc_head %}<div class="fs-4 fw-bold" style="color:#1b7f4c">PAYSLIP</div><div class="fw-semibold">{{ s.run.period }}</div>{% endblock %}
+{% block body %}
+{% set e = s.employee %}
+<div class="row small mb-4"><div class="col-6"><div class="fw-semibold fs-5">{{ e.name }}</div><div>{{ e.position or '' }}{% if e.staff_no %} · No. {{ e.staff_no }}{% endif %}</div><div>ID {{ e.national_id or '—' }} · PIN {{ e.kra_pin or '—' }}</div></div>
+<div class="col-6 text-end"><div>NSSF {{ e.nssf_no or '—' }} · SHA {{ e.shif_no or '—' }}</div><div>Paid via {{ e.payment_method }} {{ e.account_details or '' }}</div><div>Days worked: {{ num(s.days_worked) }}</div></div></div>
+<div class="row"><div class="col-6"><table class="table table-sm"><thead><tr><th>Earnings</th><th class="text-end">KES</th></tr></thead><tbody>
+<tr><td>Basic pay</td><td class="text-end">{{ money(s.basic, false) }}</td></tr><tr><td>Allowances</td><td class="text-end">{{ money(s.allowances, false) }}</td></tr><tr><td>Overtime</td><td class="text-end">{{ money(s.overtime, false) }}</td></tr></tbody>
+<tfoot><tr><th>Gross pay</th><th class="text-end">{{ money(s.gross, false) }}</th></tr></tfoot></table></div>
+<div class="col-6"><table class="table table-sm"><thead><tr><th>Deductions</th><th class="text-end">KES</th></tr></thead><tbody>
+<tr><td>NSSF</td><td class="text-end">{{ money(s.nssf, false) }}</td></tr><tr><td>SHIF</td><td class="text-end">{{ money(s.shif, false) }}</td></tr><tr><td>Housing levy</td><td class="text-end">{{ money(s.housing_levy, false) }}</td></tr>
+<tr><td>PAYE <span class="muted">(taxable {{ money(s.taxable, false) }})</span></td><td class="text-end">{{ money(s.paye, false) }}</td></tr><tr><td>Salary advance</td><td class="text-end">{{ money(s.advances, false) }}</td></tr><tr><td>Other</td><td class="text-end">{{ money(s.other_deductions, false) }}</td></tr></tbody>
+<tfoot><tr><th>Total deductions</th><th class="text-end">{{ money(s.total_deductions, false) }}</th></tr></tfoot></table></div></div>
+<div class="p-3 rounded d-flex" style="background:#f4f8f2"><span class="fw-semibold fs-5">Net pay</span><span class="ms-auto fw-bold fs-4">{{ money(s.net) }}</span></div>
+<div class="row mt-5 small"><div class="col-6">Employee signature: ____________________</div><div class="col-6 text-end">Approved by: ____________________</div></div>
+{% endblock %}

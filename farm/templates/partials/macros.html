@@ -1,0 +1,65 @@
+{% macro field_input(f, value, name=None, compact=False) -%}
+  {%- set n = name or f.name -%}
+  {%- set req = 'required' if f.required and f.type != 'bool' and not compact else '' -%}
+  {%- set cls = 'form-control form-control-sm' if compact else 'form-control' -%}
+  {%- set scls = 'form-select form-select-sm' if compact else 'form-select' -%}
+  {%- if f.type == 'textarea' -%}
+    <textarea class="{{ cls }}" name="{{ n }}" id="f_{{ n }}" rows="2" {{ req }}>{{ value }}</textarea>
+  {%- elif f.type == 'select' -%}
+    <select class="{{ scls }}" name="{{ n }}" id="f_{{ n }}" {{ req }}>
+      <option value="">{{ '— choose —' if f.required else '—' }}</option>
+      {%- for c in f.choices %}<option value="{{ c }}" {% if value|string == c|string %}selected{% endif %}>{{ c }}</option>{% endfor -%}
+    </select>
+  {%- elif f.type == 'fk' -%}
+    <select class="{{ scls }}" name="{{ n }}" id="f_{{ n }}" {{ req }} data-searchable>
+      <option value="">{{ '— choose —' if f.required else '—' }}</option>
+      {%- for id, label in f.fk_options() %}<option value="{{ id }}" {% if value|string == id|string %}selected{% endif %}>{{ label }}</option>{% endfor -%}
+    </select>
+  {%- elif f.type == 'bool' -%}
+    <div class="form-check form-switch mt-2">
+      <input class="form-check-input" type="checkbox" role="switch" name="{{ n }}" id="f_{{ n }}" value="1" {% if value and value not in ('0', 'False') %}checked{% endif %}>
+      <label class="form-check-label" for="f_{{ n }}">{{ 'Yes' }}</label>
+    </div>
+  {%- elif f.type in ('number', 'money', 'int') -%}
+    <input class="{{ cls }} text-end" type="number" name="{{ n }}" id="f_{{ n }}" value="{{ value }}" {{ req }}
+           step="{{ f.step or ('1' if f.type == 'int' else '0.01') }}" inputmode="decimal">
+  {%- else -%}
+    <input class="{{ cls }}" type="{{ f.type if f.type in ('date', 'email', 'tel') else 'text' }}" name="{{ n }}" id="f_{{ n }}" value="{{ value }}" {{ req }}>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro stat_tiles(tiles) -%}
+<div class="row g-3 mb-3">
+  {% for t in tiles %}
+  <div class="col-6 col-xl-3">
+    <div class="stat-card tone-{{ t.tone }}">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="stat-label">{{ t.label }}</div>
+        {% if t.icon %}<i class="bi bi-{{ t.icon }} stat-icon"></i>{% endif %}
+      </div>
+      <div class="stat-value">
+        {%- if t.fmt == 'money' %}{{ money(t.value) }}{% elif t.fmt == 'int' %}{{ '{:,}'.format(t.value|int) }}{% elif t.fmt == 'number' %}{{ num(t.value) }}{% else %}{{ t.value }}{% endif -%}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro kpi(label, value, sub=None, icon=None, tone='success', link=None, link_label='Open report') -%}
+<div class="kpi-card h-100">
+  <div class="d-flex justify-content-between align-items-start">
+    <div class="kpi-label">{{ label }}</div>
+    {% if icon %}<i class="bi bi-{{ icon }} kpi-icon text-{{ tone }}"></i>{% endif %}
+  </div>
+  <div class="kpi-value">{{ value }}</div>
+  {% if sub %}<div class="kpi-sub">{{ sub }}</div>{% endif %}
+  {% if link %}<a href="{{ link }}" class="btn btn-sm btn-outline-{{ tone }} mt-3"><i class="bi bi-arrow-right-circle"></i> {{ link_label }}</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro empty(colspan, text) -%}
+<tr><td colspan="{{ colspan }}" class="empty-row">{{ text }}</td></tr>
+{%- endmacro %}
+
+{% macro csrf() -%}<input type="hidden" name="_csrf" value="{{ csrf_token() }}">{%- endmacro %}

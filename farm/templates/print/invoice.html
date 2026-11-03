@@ -1,0 +1,17 @@
+{% extends 'print/base_print.html' %}
+{% block title %}{{ inv.number }}{% endblock %}
+{% block doc_head %}<div class="fs-3 fw-bold" style="color:#1b7f4c">INVOICE</div><div class="fw-semibold">{{ inv.number }}</div>{% endblock %}
+{% block body %}
+<div class="row mb-4"><div class="col-7"><div class="small muted text-uppercase">Bill to</div><div class="fw-semibold fs-5">{{ inv.buyer.name }}</div>
+  <div class="small">{{ inv.buyer.location or '' }}<br>{{ inv.buyer.phone or '' }} {{ inv.buyer.email or '' }}{% if inv.buyer.kra_pin %}<br>PIN {{ inv.buyer.kra_pin }}{% endif %}</div></div>
+  <div class="col-5 text-end small"><div><span class="muted">Invoice date:</span> {{ dmy(inv.date) }}</div><div><span class="muted">Due date:</span> {{ dmy(inv.due_date) }}</div>
+  <div class="mt-2"><span class="badge text-bg-{{ badge(inv.status) }} fs-6">{{ inv.status }}</span></div></div></div>
+<table class="table"><thead><tr><th>#</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Amount</th></tr></thead>
+<tbody>{% for l in inv.lines %}<tr><td>{{ loop.index }}</td><td>{{ l.description }}</td><td class="text-end">{{ num(l.quantity) }} {{ l.unit or '' }}</td><td class="text-end">{{ money(l.unit_price, false) }}</td><td class="text-end">{{ money(l.amount, false) }}</td></tr>{% endfor %}</tbody>
+<tfoot><tr><th colspan="4" class="text-end">Total</th><th class="text-end">{{ money(inv.total) }}</th></tr>
+<tr><td colspan="4" class="text-end muted">Paid</td><td class="text-end">{{ money(inv.paid) }}</td></tr>
+<tr><th colspan="4" class="text-end">Balance due</th><th class="text-end fs-5">{{ money(inv.balance) }}</th></tr></tfoot></table>
+{% if inv.notes %}<p class="small">{{ inv.notes }}</p>{% endif %}
+<div class="mt-4 p-3 rounded" style="background:#f4f8f2"><div class="small fw-semibold">Payment</div><div class="small">{{ S.get('payment_instructions') }}</div></div>
+<p class="text-center small muted mt-4 mb-0">Thank you for buying from {{ S.get('farm_name') }}.</p>
+{% endblock %}

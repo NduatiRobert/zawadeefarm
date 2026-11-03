@@ -1,0 +1,41 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Payroll · ' ~ run.period %}
+{% block content %}
+{{ m.stat_tiles([
+  dict(label='Gross pay', value=run.total('gross'), tone='success', fmt='money', icon='cash'),
+  dict(label='Statutory deductions', value=run.total('paye') + run.total('nssf') + run.total('shif') + run.total('housing_levy'), tone='danger', fmt='money', icon='bank'),
+  dict(label='Net pay', value=run.total('net'), tone='primary', fmt='money', icon='wallet2'),
+  dict(label='Status', value=run.status ~ (' · ' ~ dmy(run.paid_on) if run.paid_on else ''), tone='secondary', fmt='text', icon='flag'),
+]) }}
+<form method="post" class="card table-card">{{ m.csrf() }}
+  <div class="card-header d-flex flex-wrap gap-2 align-items-center no-print">
+    <a href="{{ url_for('payroll.runs') }}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i></a>
+    <h2 class="card-title-sm mb-0">Payslips</h2>
+    <div class="ms-auto d-flex flex-wrap gap-2">
+      {% if run.status == 'Draft' %}
+        <button class="btn btn-sm btn-outline-success" name="action" value="recalc"><i class="bi bi-arrow-repeat"></i> Save deductions &amp; recalculate</button>
+        <button class="btn btn-sm btn-success" name="action" value="approve"><i class="bi bi-check2-circle"></i> Approve</button>
+        <button class="btn btn-sm btn-outline-danger" name="action" value="delete" onclick="return confirm('Delete this draft payroll?')"><i class="bi bi-trash"></i></button>
+      {% elif run.status == 'Approved' %}
+        <button class="btn btn-sm btn-outline-secondary" name="action" value="reopen">Reopen draft</button>
+        <button class="btn btn-sm btn-success" name="action" value="paid"><i class="bi bi-cash-coin"></i> Mark as paid</button>
+      {% endif %}
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+    </div>
+  </div>
+  <div class="table-responsive"><table class="table data-table align-middle mb-0">
+    <thead><tr><th>Employee</th><th class="text-end">Days</th><th class="text-end">Basic</th><th class="text-end">Allow.</th><th class="text-end">Overtime</th><th class="text-end">Gross</th><th class="text-end">NSSF</th><th class="text-end">SHIF</th><th class="text-end">Housing</th><th class="text-end">PAYE</th><th class="text-end" style="min-width:110px">Advances</th><th class="text-end" style="min-width:110px">Other ded.</th><th class="text-end">Net pay</th><th class="no-print"></th></tr></thead>
+    <tbody>{% for s in slips %}<tr><td>{{ s.employee.name }}<div class="small text-muted">{{ s.employee.position or '' }} · {{ s.employee.pay_basis }}</div></td>
+      <td class="text-end">{{ num(s.days_worked) }}</td><td class="text-end">{{ money(s.basic, false) }}</td><td class="text-end">{{ money(s.allowances, false) }}</td><td class="text-end">{{ money(s.overtime, false) }}</td><td class="text-end fw-semibold">{{ money(s.gross, false) }}</td>
+      <td class="text-end">{{ money(s.nssf, false) }}</td><td class="text-end">{{ money(s.shif, false) }}</td><td class="text-end">{{ money(s.housing_levy, false) }}</td><td class="text-end">{{ money(s.paye, false) }}</td>
+      {% if run.status == 'Draft' %}
+      <td><input class="form-control form-control-sm text-end" type="number" step="0.01" name="adv_{{ s.id }}" value="{{ s.advances or 0 }}"></td>
+      <td><input class="form-control form-control-sm text-end" type="number" step="0.01" name="oth_{{ s.id }}" value="{{ s.other_deductions or 0 }}"></td>
+      {% else %}<td class="text-end">{{ money(s.advances, false) }}</td><td class="text-end">{{ money(s.other_deductions, false) }}</td>{% endif %}
+      <td class="text-end fw-bold">{{ money(s.net, false) }}</td>
+      <td class="no-print"><a class="btn btn-sm btn-light" target="_blank" href="{{ url_for('payroll.payslip', id=s.id) }}" title="Payslip"><i class="bi bi-file-earmark-person"></i></a></td></tr>
+    {% else %}{{ m.empty(14, 'No payslips. Add permanent or contract employees first.') }}{% endfor %}</tbody>
+    <tfoot><tr class="fw-bold"><td>Totals</td><td></td><td class="text-end">{{ money(run.total('basic'), false) }}</td><td class="text-end">{{ money(run.total('allowances'), false) }}</td><td class="text-end">{{ money(run.total('overtime'), false) }}</td><td class="text-end">{{ money(run.total('gross'), false) }}</td><td class="text-end">{{ money(run.total('nssf'), false) }}</td><td class="text-end">{{ money(run.total('shif'), false) }}</td><td class="text-end">{{ money(run.total('housing_levy'), false) }}</td><td class="text-end">{{ money(run.total('paye'), false) }}</td><td class="text-end">{{ money(run.total('advances'), false) }}</td><td class="text-end">{{ money(run.total('other_deductions'), false) }}</td><td class="text-end">{{ money(run.total('net'), false) }}</td><td class="no-print"></td></tr></tfoot>
+  </table></div>
+</form>
+{% endblock %}

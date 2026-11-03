@@ -1,0 +1,15 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Adjust stock' %}
+{% block content %}
+<form method="post" class="card form-card" style="max-width:640px">{{ m.csrf() }}
+  <div class="card-header"><h2 class="card-title-sm mb-0">{{ item.name }}</h2><div class="small text-muted">System balance: <b>{{ num(item.quantity) }} {{ item.unit }}</b> at {{ money(item.avg_cost) }} each</div></div>
+  <div class="card-body row g-3">
+    <div class="col-md-6"><label class="form-label">Physical count ({{ item.unit }}) *</label><input class="form-control text-end" type="number" step="any" name="counted" required value="{{ num(item.quantity) if item.quantity else '' }}"></div>
+    <div class="col-md-6"><label class="form-label">Unit cost (for added stock)</label><input class="form-control text-end" type="number" step="0.01" name="unit_cost" value="{{ item.avg_cost or '' }}"></div>
+    <div class="col-md-6"><label class="form-label">Date</label><input class="form-control" type="date" name="date" value="{{ today.isoformat() }}"></div>
+    <div class="col-md-6"><label class="form-label">Reason</label><input class="form-control" name="reason" placeholder="Opening stock / monthly count / damaged"></div>
+    <div class="col-12"><div class="note mb-0">The difference between the count and the system balance is posted to the stock card. Shortfalls are written off at average cost and are not charged to an enterprise.</div></div>
+  </div>
+  <div class="card-footer d-flex justify-content-end gap-2"><a href="{{ url_for('crud.items_list') }}" class="btn btn-light">Cancel</a><button class="btn btn-success">Post adjustment</button></div>
+</form>
+{% endblock %}

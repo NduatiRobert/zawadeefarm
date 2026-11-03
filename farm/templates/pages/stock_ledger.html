@@ -1,0 +1,14 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Stock Ledger' %}
+{% block content %}
+<form class="card toolbar-card mb-3"><div class="card-body row g-2 align-items-end">
+  <div class="col-md-4"><label class="form-label small">Item</label><select class="form-select" name="item"><option value="">All items</option>{% for i in items %}<option value="{{ i.id }}" {% if request.args.item == i.id|string %}selected{% endif %}>{{ i.name }}</option>{% endfor %}</select></div>
+  <div class="col-md-3"><label class="form-label small">Movement type</label><select class="form-select" name="kind"><option value="">All</option>{% for k in kinds %}<option value="{{ k }}" {% if request.args.kind == k %}selected{% endif %}>{{ k.replace('_', ' ')|capitalize }}</option>{% endfor %}</select></div>
+  <div class="col-auto"><button class="btn btn-success">Apply</button></div>
+  <div class="col-auto ms-auto"><button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Print</button></div>
+</div></form>
+<div class="card table-card"><div class="table-responsive"><table class="table data-table mb-0"><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Reference</th><th>Group / enterprise</th><th class="text-end">Qty</th><th class="text-end">Unit cost</th><th class="text-end">Value</th><th>Notes</th></tr></thead>
+<tbody>{% for mv in moves %}<tr><td>{{ dmy(mv.date) }}</td><td><a href="{{ url_for('pages.item_history', id=mv.item_id) }}">{{ mv.item.name }}</a></td><td class="text-capitalize">{{ mv.kind.replace('_', ' ') }}</td><td>{{ mv.ref }}</td><td>{{ mv.group or mv.enterprise or '' }}</td>
+  <td class="text-end {{ 'text-success' if mv.quantity > 0 else 'text-danger' }}">{{ '%+g'|format(mv.quantity) }} {{ mv.item.unit }}</td><td class="text-end">{{ money(mv.unit_cost, false) }}</td><td class="text-end">{{ money(mv.total_cost, false) }}</td><td>{{ mv.notes or '' }}</td></tr>
+{% else %}{{ m.empty(9, 'No stock movements.') }}{% endfor %}</tbody></table></div></div>
+{% endblock %}

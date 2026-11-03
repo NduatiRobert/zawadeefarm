@@ -1,0 +1,6 @@
+.git
+__pycache__
+farm/instance
+*.db
+.env
+tests

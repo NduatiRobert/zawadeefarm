@@ -1,0 +1,141 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Dashboard' %}
+{% block content %}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title-sm mb-0">Farm pulse · {{ today.strftime('%B %Y') }}</h2>
+    <div class="small text-muted">Income, costs, stock and people at a glance.</div></div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-sm-6 col-xl">
+        {{ m.kpi('This month net', money(month.net), money(month.total_income) ~ ' income vs ' ~ money(month.total_costs) ~ ' costs',
+                 'graph-up-arrow', 'success' if month.net >= 0 else 'danger', url_for('reports.profit_loss')) }}
+      </div>
+      <div class="col-sm-6 col-xl">
+        {{ m.kpi('Best enterprise', best[0] if best else 'No sales yet',
+                 (money(best[1].income) ~ ' sales this month') if best else 'Record pig, egg or bird sales to rank enterprises',
+                 'trophy', 'warning', url_for('reports.enterprises')) }}
+      </div>
+      <div class="col-sm-6 col-xl">
+        {{ m.kpi('Biggest cost area', biggest[0] if biggest else 'No costs yet',
+                 (money(biggest[1]) ~ ' this month') if biggest else 'Cost categories appear after recording usage and expenses',
+                 'pie-chart', 'secondary', url_for('reports.profit_loss')) }}
+      </div>
+      <div class="col-sm-6 col-xl">
+        {{ m.kpi('Stock risk', low|length ~ ' alert' ~ ('' if low|length == 1 else 's'),
+                 (low[:2]|map(attribute='name')|join(', ') ~ (' and more' if low|length > 2 else '') ~ ' at or below re-order level') if low else 'No low-stock items currently flagged',
+                 'exclamation-triangle' if low else 'check2-circle', 'danger' if low else 'success', url_for('crud.items_list')) }}
+      </div>
+      <div class="col-sm-6 col-xl">
+        {{ m.kpi("Today's attendance", present ~ ' present', 'of ' ~ staff ~ ' active staff', 'calendar-check', 'primary',
+                 url_for('pages.attendance_register'), 'Take register') }}
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ m.stat_tiles([
+  dict(label='Inputs purchased this month', value=inputs_month, tone='warning', fmt='money', icon='basket'),
+  dict(label='Supplier credit balance', value=supplier_balance, tone='danger', fmt='money', icon='receipt'),
+  dict(label='Supplier credits due in 7 days', value=credits_due|length, tone='warning', fmt='int', icon='calendar-event'),
+  dict(label='Current stock value', value=stock_value, tone='success', fmt='money', icon='box-seam'),
+]) }}
+{{ m.stat_tiles([
+  dict(label='Owed by buyers', value=receivables, tone='primary', fmt='money', icon='hourglass-split'),
+  dict(label='Overdue invoices', value=overdue_invoices|length, tone='danger', fmt='int', icon='exclamation-octagon'),
+  dict(label='Pigs on farm', value=pigs, tone='warning', fmt='int', icon='piggy-bank'),
+  dict(label='Birds on farm · eggs today', value='{:,} · {:,}'.format(birds, eggs_today|int), tone='success', fmt='text', icon='egg'),
+]) }}
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center flex-wrap gap-2">
+        <h2 class="card-title-sm mb-0">Income vs costs · last 6 months</h2>
+        <div class="legend ms-auto"><span><span class="dot" style="background:#1b7f4c"></span>Income</span><span><span class="dot" style="background:#7c5cc4"></span>Costs</span></div>
+      </div>
+      <div class="card-body">
+        <div class="chart-box"><canvas id="trend" aria-label="Monthly income and costs bar chart" role="img"></canvas></div>
+        <details class="mt-2 small"><summary>View as table</summary>
+          <table class="table table-sm mini-table mt-2"><thead><tr><th>Month</th><th class="text-end">Income</th><th class="text-end">Costs</th><th class="text-end">Net</th></tr></thead>
+          <tbody>{% for r in series %}<tr><td>{{ r.label }}</td><td class="text-end">{{ money(r.income, false) }}</td><td class="text-end">{{ money(r.costs, false) }}</td><td class="text-end {{ 'text-danger' if r.net < 0 }}">{{ money(r.net, false) }}</td></tr>{% endfor %}</tbody></table>
+        </details>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><h2 class="card-title-sm mb-0">Where the money went · this month</h2></div>
+      <div class="card-body">
+        {% set maxc = (month.by_category.values()|max) if month.by_category else 0 %}
+        {% for cat, amt in month.by_category.items() %}{% if loop.index <= 7 %}
+          <div class="mb-2">
+            <div class="d-flex small"><span>{{ cat }}</span><span class="ms-auto fw-semibold">{{ money(amt, false) }}</span></div>
+            <div class="progress" style="height:8px" role="progressbar" aria-label="{{ cat }}" aria-valuenow="{{ amt }}" aria-valuemin="0" aria-valuemax="{{ maxc }}">
+              <div class="progress-bar" style="width:{{ (amt * 100 / maxc) if maxc else 0 }}%; background:#7c5cc4; border-radius:4px"></div></div>
+          </div>
+        {% endif %}{% else %}<p class="text-muted text-center my-5">No costs recorded this month.</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header d-flex"><h2 class="card-title-sm mb-0">Tasks due</h2><a class="ms-auto small" href="{{ url_for('pages.daily') }}">Today's agenda →</a></div>
+      <ul class="list-group list-group-flush list-agenda">
+        {% for t in tasks %}<li class="list-group-item d-flex gap-2"><span class="badge text-bg-{{ badge(t.priority) }} align-self-start">{{ t.priority }}</span>
+          <div><div>{{ t.title }}</div><div class="small text-muted">{{ dmy(t.due_date) }}{% if t.assigned_to %} · {{ t.assigned_to }}{% endif %}</div></div></li>
+        {% else %}<li class="list-group-item text-muted text-center py-4">Nothing due. 🎉</li>{% endfor %}
+      </ul></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header d-flex"><h2 class="card-title-sm mb-0">Farrowings due (3 weeks)</h2><a class="ms-auto small" href="{{ url_for('crud.breeding_list') }}">Breeding →</a></div>
+      <ul class="list-group list-group-flush list-agenda">
+        {% for b in farrowings %}<li class="list-group-item d-flex"><div><i class="bi bi-gender-female text-danger"></i> {{ b.female }}</div>
+          <div class="ms-auto small {{ 'text-danger fw-semibold' if b.expected_date and b.expected_date <= today }}">{{ dmy(b.expected_date) }}</div></li>
+        {% else %}<li class="list-group-item text-muted text-center py-4">No farrowings due soon.</li>{% endfor %}
+      </ul></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header d-flex"><h2 class="card-title-sm mb-0">Low stock</h2><a class="ms-auto small" href="{{ url_for('crud.purchases_new') }}">New purchase →</a></div>
+      <ul class="list-group list-group-flush list-agenda">
+        {% for i in low %}<li class="list-group-item d-flex"><div>{{ i.name }}</div><div class="ms-auto small text-danger">{{ num(i.quantity) }} {{ i.unit }} <span class="text-muted">/ {{ num(i.reorder_level) }}</span></div></li>
+        {% else %}<li class="list-group-item text-muted text-center py-4">All items above re-order level.</li>{% endfor %}
+      </ul></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/chart.umd.js') }}"></script>
+<script>
+(function () {
+  const data = {{ series|tojson }};
+  const cur = {{ S.get('currency')|tojson }};
+  const fmt = (v) => cur + " " + Number(v).toLocaleString(undefined, {maximumFractionDigits: 0});
+  new Chart(document.getElementById("trend"), {
+    type: "bar",
+    data: {
+      labels: data.map((d) => d.label),
+      datasets: [
+        {label: "Income", data: data.map((d) => d.income), backgroundColor: "#1b7f4c", borderRadius: 4, borderSkipped: "bottom", maxBarThickness: 28},
+        {label: "Costs", data: data.map((d) => d.costs), backgroundColor: "#7c5cc4", borderRadius: 4, borderSkipped: "bottom", maxBarThickness: 28},
+      ],
+    },
+    options: {
+      maintainAspectRatio: false,
+      interaction: {mode: "index", intersect: false},
+      plugins: {legend: {display: false}, tooltip: {callbacks: {
+        label: (c) => " " + c.dataset.label + ": " + fmt(c.parsed.y),
+        footer: (items) => "Net: " + fmt(items[0].parsed.y - (items[1] ? items[1].parsed.y : 0)),
+      }}},
+      scales: {
+        x: {grid: {display: false}, ticks: {color: "#6b766d"}},
+        y: {beginAtZero: true, grid: {color: "#eef1ec"}, border: {display: false},
+            ticks: {color: "#6b766d", callback: (v) => Number(v).toLocaleString(undefined, {notation: "compact"})}},
+      },
+      datasets: {bar: {categoryPercentage: 0.7, barPercentage: 0.9}},
+    },
+  });
+})();
+</script>
+{% endblock %}

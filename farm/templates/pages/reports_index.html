@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% set page_title = 'Reports' %}
+{% block content %}
+<div class="row g-3">{% for label, icon, ep, desc in [
+  ('Profit & Loss','graph-up-arrow','reports.profit_loss','Income and costs by enterprise for any period.'),
+  ('Enterprise performance','trophy','reports.enterprises','Which enterprise makes the most money.'),
+  ('Receivables','hourglass-split','reports.receivables','What buyers owe, aged by days overdue.'),
+  ('Payables','journal-minus','reports.payables','What the farm owes suppliers.'),
+  ('Stock & usage','boxes','reports.stock','Stock valuation and inputs used per enterprise.'),
+  ('Payroll returns','bank','reports.payroll_summary','PAYE, NSSF, SHIF and Housing Levy to remit.')] %}
+  <div class="col-md-6 col-xl-4"><a href="{{ url_for(ep) }}" class="kpi-card d-block text-decoration-none text-reset h-100"><i class="bi bi-{{ icon }} fs-3 text-success"></i><div class="fw-semibold mt-2">{{ label }}</div><div class="kpi-sub">{{ desc }}</div></a></div>{% endfor %}</div>
+{% endblock %}

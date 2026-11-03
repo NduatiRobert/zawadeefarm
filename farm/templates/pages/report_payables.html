@@ -1,0 +1,9 @@
+{% extends 'base.html' %}{% import 'partials/macros.html' as m with context %}
+{% set page_title = 'Payables' %}
+{% block content %}
+<div class="row g-3 mb-3">{% for s, amt in by_supplier.items() %}<div class="col-6 col-lg-3"><div class="stat-card tone-danger"><div class="stat-label">{{ s }}</div><div class="stat-value">{{ money(amt) }}</div></div></div>{% endfor %}</div>
+<div class="card table-card"><div class="card-header d-flex"><h2 class="card-title-sm mb-0">Unpaid supplier purchases</h2><button class="btn btn-sm btn-outline-secondary ms-auto no-print" onclick="window.print()"><i class="bi bi-printer"></i> Print</button></div>
+<div class="table-responsive"><table class="table data-table mb-0"><thead><tr><th>Purchase</th><th>Supplier</th><th>Reference</th><th>Date</th><th>Due</th><th class="text-end">Total</th><th class="text-end">Paid</th><th class="text-end">Balance</th><th>Status</th></tr></thead>
+<tbody>{% for p in rows %}<tr><td><a href="{{ url_for('crud.purchases_edit', id=p.id) }}">{{ p }}</a></td><td>{{ p.supplier }}</td><td>{{ p.reference or '' }}</td><td>{{ dmy(p.date) }}</td><td>{{ dmy(p.due_date) }}</td><td class="text-end">{{ money(p.total, false) }}</td><td class="text-end">{{ money(p.amount_paid, false) }}</td><td class="text-end fw-semibold">{{ money(p.balance, false) }}</td><td><span class="badge text-bg-{{ badge(p.status) }}">{{ p.status }}</span></td></tr>
+{% else %}{{ m.empty(9, 'No supplier balances owed.') }}{% endfor %}</tbody></table></div></div>
+{% endblock %}
